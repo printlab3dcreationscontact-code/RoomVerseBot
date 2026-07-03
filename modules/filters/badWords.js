@@ -3,7 +3,7 @@ const punish = require('../../utils/punishment');
 
 module.exports = {
     async check(message) {
-        // 1. Séparation des listes par langue pour savoir quoi répondre
+        // 1. Listes de mots interdits
         const badWordsFR = [
             'pute', 'putain', 'salope', 'connard', 'connasse', 'enculé', 'fdp', 
             'tamer', 'nique', 'ntm', 'tg', 'batard', 'bouffon', 'clochard', 
@@ -16,55 +16,37 @@ module.exports = {
             'slut', 'shit', 'dumbass', 'jackass', 'loser', 'faggot', 'fag'
         ];
 
-        // Mots universels ou codes
         const badWordsUniversal = ['kys', 'kms', 'ez', 'ratio', 'nazi', 'hitler', 'kkk'];
 
-        // On fusionne tout pour la recherche globale
         const allBadWords = [...badWordsFR, ...badWordsEN, ...badWordsUniversal];
         
         let content = message.content.toLowerCase();
         
-        // Nettoyage intelligent
+        // Nettoyage intelligent (transforme "F.D.P" ou "FDPPP" en "fdp")
         let cleanContent = content.replace(/[^a-z]/g, '');
         cleanContent = cleanContent.replace(/(.)\1+/g, '$1');
 
-        // 2. Vérification du mot
+        // 2. Vérification
         const foundWord = allBadWords.find(word => cleanContent.includes(word));
 
         if (foundWord) {
-            // 3. Détection automatique de la langue pour la réponse
-            // On regarde d'abord la langue configurée sur le compte de l'utilisateur (si Discord la transmet)
-            let userLanguage = message.author.locale || 'fr'; 
-
-            // Si Discord ne donne pas la langue du compte, on devine selon le mot qu'il a utilisé
-            if (!message.author.locale) {
-                if (badWordsEN.includes(foundWord)) {
-                    userLanguage = 'en';
-                } else {
-                    userLanguage = 'fr'; // Par défaut en français pour RoomVerse
-                }
-            }
-
-            // 4. Choix du message selon la langue
-            let warningMessage = "";
-            if (userLanguage.startsWith('en')) {
-                warningMessage = `⚠️ **Whoa whoa whoa, watch your language ${message.author}!**`;
-            } else {
-                warningMessage = `⚠️ **Hop hop hop, revois ton vocabulaire ${message.author} !**`;
-            }
-
-            // Suppression du message insultant
+            // 3. Suppression du message
             if (message.guild.members.me.permissions.has('ManageMessages')) {
-                await message.delete().catch(err => console.error("Erreur suppression message :", err));
+                await message.delete().catch(() => {});
             }
             
-            // Envoi du message d'avertissement personnalisé dans le salon
+            // 4. Message d'avertissement temporaire dans le salon
+            const isEnglish = badWordsEN.includes(foundWord);
+            const warningMessage = isEnglish 
+                ? `⚠️ **Whoa whoa whoa, watch your language ${message.author}!**`
+                : `⚠️ **Hop hop hop, revois ton vocabulaire ${message.author} !**`;
+
             const warningPrompt = await message.channel.send(warningMessage);
-            // Optionnel : supprime l'avertissement du bot après 5 secondes pour garder le salon propre
             setTimeout(() => warningPrompt.delete().catch(() => {}), 5000);
 
-            // Application de la sanction (Timeout 2min)
-            await punish.applySanction(message.member, 'timeout', `Contenu inapproprié détecté (${foundWord})`, message.channel);
+            // 5. Application de la sanction progressive (via punishment.js)
+            // On ne précise plus la durée, le système de paliers la calcule tout seul !
+            await punish.applySanction(message.member, 'timeout', `Usage de mot interdit : ${foundWord}`, message.channel);
             
             return true;
         }
