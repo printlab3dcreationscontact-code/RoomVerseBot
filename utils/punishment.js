@@ -28,7 +28,7 @@ module.exports = {
 
         // 4. Alerte aux modérateurs si le comportement persiste (dès la 3ème infraction)
         if (count >= 3) {
-            const modChannel = member.guild.channels.cache.get('1316389736776077322'); // Remplace par ton ID réel
+            const modChannel = member.guild.channels.cache.get('1512554829405225070'); // Remplace par ton ID réel
             if (modChannel) {
                 modChannel.send(`⚠️ **Alerte AutoMod** : ${member} en est à sa **${count}ème infraction**. Raison : *${reason}*.`);
             }
