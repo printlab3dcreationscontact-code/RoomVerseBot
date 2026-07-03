@@ -2,11 +2,11 @@ const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 
 // --- Gestion des erreurs pour empêcher le bot de crash ---
 process.on('unhandledRejection', (reason) => {
-    console.error('Erreur mineure ignorée :', reason.message || reason);
+    console.error('Erreur mineure ignorée :', reason.stack || reason);
 });
 
 process.on('uncaughtException', (err) => {
-    console.error('Exception critique, le bot tente de rester en vie :', err.message);
+    console.error('Exception critique, le bot tente de rester en vie :', err.stack);
 });
 
 // --- Modules et Utilitaires ---
