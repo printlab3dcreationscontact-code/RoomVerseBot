@@ -2,6 +2,9 @@
 const { EmbedBuilder } = require('discord.js');
 const infractions = new Map();
 
+// ID du salon où les alertes doivent être envoyées (Remplace par ton vrai ID)
+const LOG_CHANNEL_ID = '1512554829405225070'; 
+
 module.exports = {
     async applySanction(member, type, reason, channel) {
         // 1. Sécurité : Ne jamais sanctionner le propriétaire ou le bot
@@ -13,6 +16,9 @@ module.exports = {
         const userId = member.id;
         const count = (infractions.get(userId) || 0) + 1;
         infractions.set(userId, count);
+
+        // Trouver le salon de log
+        const logChannel = member.guild.channels.cache.get(LOG_CHANNEL_ID);
 
         // 3. Avertissements discrets (pour les 2 premières infractions)
         if (count <= 2) {
@@ -40,18 +46,33 @@ module.exports = {
         if (count >= 6) {
             await member.kick(`Récidive excessive : ${count} infractions`).catch(console.error);
             embed.addFields({ name: 'Action', value: 'L’utilisateur a été expulsé du serveur.' });
-            channel.send({ embeds: [embed] });
+            
+            if (logChannel) {
+                logChannel.send({ embeds: [embed] });
+            } else {
+                channel.send({ embeds: [embed] });
+            }
             infractions.delete(userId);
         } else {
             if (durationMinutes > 0) {
                 await member.timeout(durationMinutes * 60 * 1000, reason).catch(console.error);
                 embed.addFields({ name: 'Sanction appliquée', value: `Timeout de ${durationMinutes} minutes.` });
             }
-            channel.send({ embeds: [embed] });
+            
+            if (logChannel) {
+                logChannel.send({ embeds: [embed] });
+            } else {
+                channel.send({ embeds: [embed] });
+            }
         }
     },
 
     resetInfractions(userId) {
         infractions.delete(userId);
+    },
+
+    // Sécurité anti-crash au cas où ton automodManager charge ce fichier par erreur
+    async check() {
+        return false;
     }
 };
