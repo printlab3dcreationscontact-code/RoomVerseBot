@@ -1,14 +1,12 @@
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 
-// Empêche le crash sur les erreurs non gérées
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('[CRASH] Erreur non gérée détectée : ', reason);
-    // Ici, le bot log l'erreur dans la console au lieu de s'arrêter
+// --- Gestion des erreurs pour empêcher le bot de crash ---
+process.on('unhandledRejection', (reason) => {
+    console.error('Erreur mineure ignorée :', reason.message || reason);
 });
 
 process.on('uncaughtException', (err) => {
-    console.error('[CRASH] Exception non capturée : ', err);
-    // Ici, le bot log l'erreur critique au lieu de s'arrêter
+    console.error('Exception critique, le bot tente de rester en vie :', err.message);
 });
 
 // --- Modules et Utilitaires ---
@@ -26,7 +24,8 @@ const client = new Client({
     ]
 });
 
-client.once('ready', () => {
+// Utilisation de clientReady au lieu de ready pour éviter le warning de v15
+client.once('clientReady', () => {
     console.log(`Connecté en tant que ${client.user.tag} !`);
 });
 
@@ -35,9 +34,9 @@ client.on('messageCreate', async (message) => {
     // 1. On ignore les messages des bots
     if (message.author.bot) return;
 
-    // 2. AutoMod : Vérification de tous les filtres (Anti-Link, Anti-Spam, etc.)
+    // 2. AutoMod : Vérification de tous les filtres
     const isInfraction = await automodManager.runAll(message);
-    if (isInfraction) return; // Si une règle est violée, on arrête ici
+    if (isInfraction) return; 
 
     // 3. Commandes
     const MON_ID = '1232266966002307095';
