@@ -1,41 +1,42 @@
 // modules/filters/badWords.js
-const punish = require('../../utils/punishment'); // Import direct sans accolades
+const punish = require('../../utils/punishment');
 
 module.exports = {
     async check(message) {
+        // Liste propre : plus besoin de mettre des variantes (FDPPPPPPP), le nettoyage s'en occupe.
         const badWords = [
             'pute', 'putain', 'salope', 'connard', 'connasse', 'enculé', 'fdp', 
-            'ta mère', 'nique', 'ntm', 'tg', 'bâtard', 'bouffon', 'clochard', 
-            'con', 'conne', 'abruti', 'idiot', 'imbécile', 'débile', 'crétin', 
-            'merde', 'enfoiré', 'ordure', 'fuck', 'bitch', 'asshole', 'dick', 
-            'cock', 'cunt', 'whore', 'slut', 'shit', 'dumbass', 'jackass', 
+            'tamer', 'nique', 'ntm', 'tg', 'batard', 'bouffon', 'clochard', 
+            'con', 'conne', 'abruti', 'idiot', 'imbecile', 'debile', 'cretin', 
+            'merde', 'enfoire', 'ordure', 'fuck', 'bitch', 'asshole', 'dick', 
+            'cock', 'cunt', 'whore', 'slut', 'shit', 'dumbass', 'jackass',
             'loser', 'kys', 'kms', 'ez', 'ratio', 'nazi', 'hitler', 'kkk', 
             'faggot', 'fag', 'suce', 'bite', 'chatte', 'couilles', 'branleur'
         ];
         
-        const content = message.content.toLowerCase();
-        const regex = new RegExp(`\\b(${badWords.join('|')})\\b`, 'i');
-        const match = content.match(regex);
+        // 1. Normalisation du message
+        let content = message.content.toLowerCase();
+        
+        // Nettoyage : 
+        // - Enlève tout ce qui n'est pas une lettre (espaces, points, tirets, etc.)
+        // - Réduit les répétitions (ex: "F.D.P.P.P" -> "fdppp" -> "fdp")
+        let cleanContent = content.replace(/[^a-z]/g, '');
+        cleanContent = cleanContent.replace(/(.)\1+/g, '$1');
 
-        if (match) {
-            // 1. Suppression du message
+        // 2. Vérification
+        // On vérifie si un mot interdit est contenu dans la version "nettoyée" du message
+        const foundWord = badWords.find(word => cleanContent.includes(word));
+
+        if (foundWord) {
+            // Suppression du message
             if (message.guild.members.me.permissions.has('ManageMessages')) {
-                await message.delete().catch(err => console.error("Impossible de supprimer le message :", err));
+                await message.delete().catch(err => console.error("Erreur suppression message :", err));
             }
             
-            // 2. Application de la sanction (Timeout)
-            // On utilise la fonction importée depuis utils/punishment.js
-            await punish.applySanction(message.member, 'timeout', `Usage de mot interdit : ${match[0]}`);
+            // Application de la sanction
+            await punish.applySanction(message.member, 'timeout', `Contenu inapproprié détecté`, message.channel);
             
-            // 3. Envoi de l'avertissement
-            const warning = await message.channel.send(`${message.author}, hop hop hop revois ton vocabulaire !`);
-            
-            // 4. Suppression de l'avertissement après 5 secondes
-            setTimeout(() => {
-                warning.delete().catch(err => console.error("Impossible de supprimer l'avertissement :", err));
-            }, 5000);
-
-            return true; // Infraction traitée
+            return true;
         }
         
         return false;
