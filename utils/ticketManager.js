@@ -2,7 +2,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 
 // ⚠️ Remplace par tes vrais IDs
-const CATEGORY_ID = '1316389736776077322';
+const CATEGORY_ID = '1316299529816903712';
 
 const MOD_ROLE_IDS = [
     '1511816725535002745',
