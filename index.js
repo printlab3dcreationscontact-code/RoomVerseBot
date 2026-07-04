@@ -1,6 +1,7 @@
+//index.js
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const ticketManager = require('./utils/ticketManager');
 
-// --- Gestion des erreurs pour empêcher le bot de crash ---
 process.on('unhandledRejection', (reason) => {
     console.error('Erreur mineure ignorée :', reason.stack || reason);
 });
@@ -60,6 +61,27 @@ client.on('messageCreate', async (message) => {
         
         client.emit('guildMemberAdd', message.member);
         message.reply("Test de bienvenue envoyé !");
+    }
+
+    // Commande !setupticket : envoie le panneau avec le bouton de création de ticket
+    if (message.content === '!setupticket') {
+        if (message.author.id !== MON_ID) return;
+
+        await message.channel.send(ticketManager.buildPanel());
+        await message.delete().catch(() => {});
+    }
+});
+
+// --- Gestion des interactions (boutons) ---
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isButton()) return;
+
+    if (interaction.customId === 'create_ticket') {
+        await ticketManager.createTicket(interaction);
+    }
+
+    if (interaction.customId === 'close_ticket') {
+        await ticketManager.closeTicket(interaction);
     }
 });
 
