@@ -1,6 +1,8 @@
 //index.js
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const ticketManager = require('./utils/ticketManager');
+const express = require('express');
+const cors = require('cors');
 
 process.on('unhandledRejection', (reason) => {
     console.error('Erreur mineure ignorée :', reason.stack || reason);
@@ -8,6 +10,96 @@ process.on('unhandledRejection', (reason) => {
 
 process.on('uncaughtException', (err) => {
     console.error('Exception critique, le bot tente de rester en vie :', err.stack);
+});
+
+// --- Initialisation du Serveur Express (API Panel) ---
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const PORT = process.env.PORT || 3000;
+const BOT_SECRET = process.env.BOT_SECRET;
+
+if (!BOT_SECRET) {
+    console.warn("⚠️ Avertissement : la variable BOT_SECRET n'est pas définie. L'API d'envoi de messages est publique.");
+}
+
+// Route de santé (utilisée par le panel pour tester la connexion)
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'ok', 
+        bot: client.user ? client.user.tag : 'non connecté' 
+    });
+});
+
+app.get('/ping', (req, res) => {
+    res.status(200).send('pong');
+});
+
+// Route d'envoi de message depuis le panel
+app.post('/api/send-message', async (req, res) => {
+    try {
+        const { channelId, secret, content, embeds } = req.body;
+
+        // Validation du Secret si configuré
+        if (BOT_SECRET) {
+            const authHeader = req.headers.authorization;
+            const providedSecret = authHeader 
+                ? authHeader.replace('Bearer ', '').trim() 
+                : secret;
+            
+            if (providedSecret !== BOT_SECRET) {
+                return res.status(403).json({ error: 'Non autorisé : Secret incorrect ou manquant' });
+            }
+        }
+
+        // Validation du Salon
+        if (!channelId) {
+            return res.status(400).json({ error: 'channelId est requis' });
+        }
+
+        // Récupérer le salon Discord
+        let channel = client.channels.cache.get(channelId);
+        if (!channel) {
+            try {
+                channel = await client.channels.fetch(channelId);
+            } catch (fetchErr) {
+                console.error(`Impossible de récupérer le salon ${channelId}:`, fetchErr);
+                return res.status(404).json({ error: `Salon Discord introuvable ou inaccessible (${channelId})` });
+            }
+        }
+
+        if (!channel.isTextBased()) {
+            return res.status(400).json({ error: 'Le salon ciblé doit être un salon textuel' });
+        }
+
+        // Préparer les options du message
+        const messageOptions = {};
+        if (content) messageOptions.content = content;
+        if (embeds && Array.isArray(embeds)) {
+            messageOptions.embeds = embeds;
+        }
+
+        if (!messageOptions.content && (!messageOptions.embeds || messageOptions.embeds.length === 0)) {
+            return res.status(400).json({ error: 'Le message doit contenir du texte ou un embed' });
+        }
+
+        // Envoyer le message
+        const sentMessage = await channel.send(messageOptions);
+        res.status(200).json({ 
+            success: true, 
+            messageId: sentMessage.id, 
+            channelId: sentMessage.channelId 
+        });
+    } catch (err) {
+        console.error("Erreur lors de l'envoi du message via l'API :", err);
+        res.status(500).json({ error: "Erreur interne du serveur lors de l'envoi", details: err.message });
+    }
+});
+
+// Lancer le serveur HTTP immédiatement pour que Railway puisse valider le déploiement
+app.listen(PORT, () => {
+    console.log(`Serveur API du Bot à l'écoute sur le port ${PORT}`);
 });
 
 // --- Modules et Utilitaires ---
