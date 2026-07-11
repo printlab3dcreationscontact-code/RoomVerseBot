@@ -36,6 +36,59 @@ app.get('/ping', (req, res) => {
     res.status(200).send('pong');
 });
 
+// Route de récupération des salons du bot
+app.get('/api/channels', async (req, res) => {
+    try {
+        // Validation du Secret si configuré
+        if (BOT_SECRET) {
+            const authHeader = req.headers.authorization;
+            const providedSecret = authHeader 
+                ? authHeader.replace('Bearer ', '').trim() 
+                : req.query.secret;
+            
+            if (providedSecret !== BOT_SECRET) {
+                return res.status(403).json({ error: 'Non autorisé : Secret incorrect ou manquant' });
+            }
+        }
+
+        const channelList = [];
+        client.guilds.cache.forEach(guild => {
+            // Parcourir tous les salons de ce serveur
+            guild.channels.cache.forEach(channel => {
+                // Filtrer pour ne garder que les salons textuels (pas les salons vocaux ni les threads)
+                // En discord.js v14, channel.type === 0 (GuildText) ou channel.isTextBased() est utilisé
+                if (channel.isTextBased() && !channel.isVoiceBased() && !channel.isThread()) {
+                    const parentName = channel.parent ? channel.parent.name : null;
+                    channelList.push({
+                        id: channel.id,
+                        name: channel.name,
+                        category: parentName,
+                        guildName: guild.name
+                    });
+                }
+            });
+        });
+
+        // Trier les salons par nom de serveur, puis par catégorie, puis par nom de salon
+        channelList.sort((a, b) => {
+            const guildCompare = a.guildName.localeCompare(b.guildName);
+            if (guildCompare !== 0) return guildCompare;
+            
+            const catA = a.category || '';
+            const catB = b.category || '';
+            const catCompare = catA.localeCompare(catB);
+            if (catCompare !== 0) return catCompare;
+            
+            return a.name.localeCompare(b.name);
+        });
+
+        res.status(200).json({ channels: channelList });
+    } catch (err) {
+        console.error("Erreur lors de la récupération des salons :", err);
+        res.status(500).json({ error: "Erreur interne lors de la récupération des salons", details: err.message });
+    }
+});
+
 // Route d'envoi de message depuis le panel
 app.post('/api/send-message', async (req, res) => {
     try {
