@@ -1,4 +1,3 @@
-//index.js
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const ticketManager = require('./utils/ticketManager');
 const express = require('express');
@@ -23,6 +22,11 @@ const BOT_SECRET = process.env.BOT_SECRET;
 if (!BOT_SECRET) {
     console.warn("⚠️ Avertissement : la variable BOT_SECRET n'est pas définie. L'API d'envoi de messages est publique.");
 }
+
+// Route racine pour maintenir le bot éveillé sur Render avec UptimeRobot
+app.get('/', (req, res) => {
+    res.status(200).send('RoomVerse Bot is running!');
+});
 
 // Route de santé (utilisée par le panel pour tester la connexion)
 app.get('/health', (req, res) => {
@@ -56,7 +60,6 @@ app.get('/api/channels', async (req, res) => {
             // Parcourir tous les salons de ce serveur
             guild.channels.cache.forEach(channel => {
                 // Filtrer pour ne garder que les salons textuels (pas les salons vocaux ni les threads)
-                // En discord.js v14, channel.type === 0 (GuildText) ou channel.isTextBased() est utilisé
                 if (channel.isTextBased() && !channel.isVoiceBased() && !channel.isThread()) {
                     const parentName = channel.parent ? channel.parent.name : null;
                     channelList.push({
@@ -150,7 +153,7 @@ app.post('/api/send-message', async (req, res) => {
     }
 });
 
-// Lancer le serveur HTTP immédiatement pour que Railway puisse valider le déploiement
+// Lancer le serveur HTTP immédiatement
 app.listen(PORT, () => {
     console.log(`Serveur API du Bot à l'écoute sur le port ${PORT}`);
 });
