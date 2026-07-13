@@ -1,0 +1,5 @@
+[main]
+DISPLAY_NAME = "RoomVerse Bot"
+MAIN = "index.js" # Remplace par le nom de ton fichier principal s'il est différent (ex: bot.js)
+MEMORY = 256
+VERSION = "recommended"
